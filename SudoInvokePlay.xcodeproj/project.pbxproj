@@ -39,9 +39,9 @@
 			isa = PBXGroup;
 			children = (
 				2CFDF6F02E6C5FB200D090EC /* SudoInvokePlayApp */,
+				2CFDF7022E6C607400D090EC /* Frameworks */,
 				2CFDF6E22E6C5F1500D090EC /* Products */,
 				2CFDF6E32E6C5F1500D090EC /* SudoInvokePlay */,
-				2CFDF7022E6C607400D090EC /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};

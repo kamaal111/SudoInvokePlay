@@ -5,6 +5,7 @@
 //  Created by Kamaal M Farah on 9/6/25.
 //
 
+import KamaalUtils
 import SwiftUI
 
 struct ContentView: View {
@@ -110,12 +111,14 @@ struct ContentView: View {
     }
 
     private func getBackupURL() -> URL {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[
+            0]
         return documentsPath.appendingPathComponent("hosts_backup.txt")
     }
 
     private func writeToHostsFile(content: String) {
-        let tempFileURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("hosts_temp")
+        let tempFileURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(
+            "hosts_temp")
         defer { try? FileManager.default.removeItem(at: tempFileURL) }
 
         do {
@@ -132,50 +135,43 @@ struct ContentView: View {
         }
 
         let script = """
-        do shell script "cp '\(tempFileURL.path)' /etc/hosts" with administrator privileges
-        """
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = ["-e", script]
-
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-
-        do {
-            try process.run()
-        } catch {
-            print("❌ Failed to read backup file: \(error)")
-            statusMessage = "Failed to read backup file"
+            do shell script "cp '\(tempFileURL.path)' /etc/hosts" with administrator privileges
+            """
+        let result = Shell.appleScript(script)
+        defer {
             isOperationInProgress = false
-            return
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                statusMessage = ""
+            }
         }
-
-        process.waitUntilExit()
-        isOperationInProgress = false
-
-        if process.terminationStatus == 0 {
+        switch result {
+        case let .failure(failure): handleShellErrorsForScriptInvocation(failure)
+        case .success:
             print("✅ Successfully updated hosts file")
             statusMessage = "✅ Successfully updated hosts file"
-        } else {
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: data, encoding: .utf8) ?? "Unknown error"
-            if output.contains("-60005") || output.contains("administrator user name or password was incorrect") {
+        }
+    }
+
+    private func handleShellErrorsForScriptInvocation(_ error: Shell.Errors) {
+        switch error {
+        case .readPipeError:
+            print("❌ Failed to read backup file: \(error)")
+            statusMessage = "Failed to read backup file"
+        case let .standardError(message):
+            if message.contains("-60005")
+                || message.contains("administrator user name or password was incorrect")
+            {
                 print("❌ Authentication failed: Incorrect password or cancelled by user")
                 print("💡 Please make sure you enter your administrator password when prompted")
                 statusMessage = "❌ Authentication failed. Please try again with correct password."
-            } else if output.contains("-128") || output.contains("User canceled") {
-                print("❌ Operation cancelled by user")
+            } else if message.contains("-128") || message.contains("User canceled") {
+                print("❌ Operation cancelled by message")
                 statusMessage = "❌ Operation cancelled by user"
+                return
             } else {
-                print("❌ Failed to update hosts file: \(output)")
-                statusMessage = "❌ Failed to update hosts file"
+                print("❌ Failed to read backup file: \(message)")
+                statusMessage = "Failed to read backup file"
             }
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-            statusMessage = ""
         }
     }
 }

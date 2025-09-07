@@ -5,11 +5,19 @@ import PackageDescription
 
 let package = Package(
     name: "SudoInvokePlayApp",
-    platforms: [.macOS(.v11)],
+    platforms: [.macOS(.v13)],
     products: [
         .library(name: "SudoInvokePlayApp", targets: ["SudoInvokePlayApp"]),
     ],
+    dependencies: [
+        .package(url: "git@github.com:Kamaalio/KamaalSwift.git", .upToNextMajor(from: "3.3.0")),
+    ],
     targets: [
-        .target(name: "SudoInvokePlayApp"),
+        .target(
+            name: "SudoInvokePlayApp",
+            dependencies: [
+                .product(name: "KamaalUtils", package: "KamaalSwift")
+            ]
+        ),
     ]
 )
